@@ -1,3 +1,6 @@
+# !pip install "peft==0.2.0"
+# !pip install "transformers==4.27.2" "datasets==2.9.0" "accelerate==0.17.1" "evaluate==0.4.0" "bitsandbytes==0.37.1" loralib --upgrade --quiet
+
 #train.py
 from dataloader import getDataset, getDataloaders
 from helpers.helper import check_cpu_memory, check_gpu_memory, save_checkpoint, load_checkpoint, set_seed, dynamic_quantization,check_model_size
@@ -20,6 +23,7 @@ from torch.cuda.amp import autocast
 from torch.cuda.amp import GradScaler 
 
 import pandas as pd
+from helpers.peft_prep import get_peft_model
 
 log_dir = "logs"  # Specify the directory where you want to store the logs
 # summary_writer = tf.summary.create_file_writer(log_dir)
@@ -65,7 +69,6 @@ def train(train_dataloader, trained_model_filename, yaml_data):
 	num_training_steps = NUM_EPOCHS * num_batches
 	optimizer    = get_opt(model, OPTIMIZER_NAME, yaml_data)
 	lr_scheduler = get_schdlr(optimizer, num_training_steps)
-	scaler       = GradScaler(enabled = True)
 	
 	# #amp initialization
 	# #avoiding as outputs.loss has unexpected behaviour 
@@ -91,63 +94,26 @@ def train(train_dataloader, trained_model_filename, yaml_data):
 				
 				batch = {k: v.to(device) for k, v in batch.items()}
 
-				if PRECISION_TYPE == 'MIXED':
-					with autocast(dtype = torch.float16, enabled = True):
-						forward_st = time.time()
-						outputs = model(**batch)
-						forward_et = time.time()
-						forward_total_time += (forward_et - forward_st)
-				elif PRECISION_TYPE == 'SINGLE':
-						forward_st = time.time()
-						outputs = model(**batch)
-						forward_et = time.time()
-						forward_total_time += (forward_et - forward_st)
+				forward_st = time.time()
+				outputs = model(**batch)
+				forward_et = time.time()
+				forward_total_time += (forward_et - forward_st)
 
 				loss = outputs.loss
-
 				running_loss += loss
 
-				# #avoiding as outputs.loss has unexpected behaviour 
-				# with amp.scale_loss(loss, optimizer) as scaled_loss:
-				# 	scaled_loss.backward()
-
 				backward_st = time.time()
-				
-				if PRECISION_TYPE == 'MIXED':
-					scaler.scale(loss).backward() 
-				elif PRECISION_TYPE == 'SINGLE':
-					loss.backward()
-				
+				loss.backward()
 				backward_et = time.time()
 				backward_total_time += (backward_et - backward_st)
 
-				if PRECISION_TYPE == 'MIXED':
-					scaler.step(optimizer)
-					scale = scaler.get_scale()
-					scaler.update()
-					skip_lr_shdlr = (scale > scaler.get_scale()) # to avoid lr step in case of NaN gradients
-
-					if not skip_lr_shdlr : 
-						lr_scheduler.step()
-				
-				elif PRECISION_TYPE == 'SINGLE':
-					optimizer.step()
-					lr_scheduler.step()
-
+				optimizer.step()
+				lr_scheduler.step()
 				optimizer.zero_grad()
 				
-				# progress_bar.update(1)
-
 				step += 1
 
 				print(f"epoch : {epoch+1} / {NUM_EPOCHS} iter : {i} / {num_batches},  loss : {loss}")
-				# tf.summary.scalar('loss', loss, step = step)
-
-				# gpu_mem, gpu_mem_max = check_gpu_memory()
-				# cpu_mem              = check_cpu_memory()
-				# tf.summary.scalar('gpu_mem', gpu_mem, step = step)
-				# tf.summary.scalar('gpu_mem_max', gpu_mem_max, step = step)
-				# tf.summary.scalar('cpu_mem', cpu_mem, step = step)
 		
 		except RuntimeError as e:
 			print(f"RuntimeError : {e}")
@@ -342,20 +308,10 @@ def main():
 
 	# set trained_model_filename if need to use a pretrained checkpoint ; else keep None
 	# eg:  'gpt2_SINGLE_chkpoint_4.pth'
-	trained_model_filename = 'gpt2_SINGLE_chkpoint_10.pth'  
+	trained_model_filename = None
 	data = getDataset(yaml_data)
 	train_dataloader, eval_dataloader = getDataloaders(data, yaml_data)
 	model = train(train_dataloader, trained_model_filename,  yaml_data)
-	# quantize = True
-	# eval(None, eval_dataloader, trained_model_filename, quantize, yaml_data)
-
-	# quantization attempt
-	
-	# model = loadModel(yaml_data)
-	# MODEL_CHKPNT_DIR  = yaml_data['MODEL_CHKPNT_DIR']
-	# checkpoint_path = os.path.join( PARENT_PATH, MODEL_CHKPNT_DIR, 'SINGLE', 'gpt2_SINGLE_chkpoint_7.pth')
-	# model, _, _  = load_checkpoint(model, None, None, checkpoint_path)
-	# model_quantize = dynamic_quantization(model)
 
 
 if __name__ == '__main__':

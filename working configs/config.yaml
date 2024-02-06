@@ -1,0 +1,33 @@
+MODEL_NAME : gpt2
+MODEL_CHKPNT_DIR : models\\gpt2\\
+TOKENIZER  : gpt2
+
+DATASET_NAME  : databricks/databricks-dolly-15k
+features : ['instruction', 'context', 'response', 'category']
+
+NUM_EPOCHS : 5
+LR         : 1e-5
+WEIGHT_DECAY : 0.01
+SEQ_LEN    : 128
+BATCH_SIZE : 8
+OPTIMIZER_NAME : AdamW
+MOMENTUM : 0.9
+
+OPT_LEVEL : '01'
+TOP_K  :
+TOP_P  : 
+DO_SAMPLE : True
+SAVE_CHKPNT_EPOCH : 2
+
+TRAIN_SIZE :
+TEST_SIZE :
+VAL_SIZE :
+
+TRAIN_PER :
+TEST_PER : 0.2
+VAL_PER :
+
+PRECISION_TYPE : 
+
+SEED : 42
+

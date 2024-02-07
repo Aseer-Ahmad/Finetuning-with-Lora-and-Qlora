@@ -11,7 +11,7 @@ import time
 import sys
 # import tensorflow as tf
 
-from transformers import AutoModelForCausalLM, TrainingArguments, Trainer
+from transformers import AutoModelForCausalLM
 from torch.optim import AdamW, Adam, SGD
 from transformers import get_scheduler
 # import evaluate
@@ -23,7 +23,7 @@ from torch.cuda.amp import autocast
 from torch.cuda.amp import GradScaler 
 
 import pandas as pd
-from helpers.peft_prep import get_peft_model
+from helpers.peft_prep import getLoraModel
 
 log_dir = "logs"  # Specify the directory where you want to store the logs
 # summary_writer = tf.summary.create_file_writer(log_dir)
@@ -70,9 +70,8 @@ def train(train_dataloader, trained_model_filename, yaml_data):
 	optimizer    = get_opt(model, OPTIMIZER_NAME, yaml_data)
 	lr_scheduler = get_schdlr(optimizer, num_training_steps)
 	
-	# #amp initialization
-	# #avoiding as outputs.loss has unexpected behaviour 
-	# model, optimizer = amp.initialize(model, optimizer, opt_level = OPT_LVL)
+	#LoRA 
+	model = getLoraModel(model)
 
 	if trained_model_filename != None:
 		model_chkpnt = os.path.join(PARENT_PATH, yaml_data['MODEL_CHKPNT_DIR'], trained_model_filename)  

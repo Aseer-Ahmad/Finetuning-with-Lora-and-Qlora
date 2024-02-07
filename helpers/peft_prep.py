@@ -1,6 +1,5 @@
 from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training, TaskType
 
-
 def getLoraModel(model):
 
     # Define LoRA Config
@@ -10,7 +9,7 @@ def getLoraModel(model):
         target_modules=["q", "v"],
         lora_dropout=0.05,
         bias="none",
-        task_type=TaskType.SEQ_2_SEQ_LM
+        task_type=TaskType.QUESTION_ANS  # Causal LM
     )
 
     # prepare int-8 model for training

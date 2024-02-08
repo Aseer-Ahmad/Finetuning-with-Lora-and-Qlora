@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 # comment disable_caching , when sure that 
 # data pre-processing is working well
-disable_caching()
+# disable_caching()
 
 def getDataloaders(data, yaml_data):
 

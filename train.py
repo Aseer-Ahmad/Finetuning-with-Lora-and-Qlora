@@ -1,5 +1,6 @@
 # !pip install "peft==0.2.0"
-# !pip install "transformers==4.27.2" "datasets==2.9.0" "accelerate==0.17.1" "evaluate==0.4.0" "bitsandbytes==0.37.1" loralib --upgrade --quiet
+# pip install loralib
+# !pip install "transformers==4.27.2" "datasets==2.9.0" "accelerate==0.17.1" "evaluate==0.4.0" "bitsandbytes==0.37.1"  --upgrade --quiet
 
 #train.py
 from dataloader import getDataset, getDataloaders
@@ -11,7 +12,7 @@ import time
 import sys
 # import tensorflow as tf
 
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM,  TrainingArguments, Trainer , BitsAndBytesConfig
 from torch.optim import AdamW, Adam, SGD
 from transformers import get_scheduler
 # import evaluate
@@ -32,7 +33,7 @@ YAML_PATH = 'config.yaml'
 PARENT_PATH  = os.getcwd()
 
 
-def train(train_dataloader, trained_model_filename, yaml_data):
+def train(data,  trained_model_filename, yaml_data):
 
 	print("\nin train")
 	#arguments
@@ -46,14 +47,16 @@ def train(train_dataloader, trained_model_filename, yaml_data):
 	OPTIMIZER_NAME    = yaml_data['OPTIMIZER_NAME']
 	OPT_LVL 		  = yaml_data['OPT_LEVEL']
 	PRECISION_TYPE    = yaml_data['PRECISION_TYPE']
+	WEIGHT_DECAY      = yaml_data['WEIGHT_DECAY']
+	PEFT_TYPE         = yaml_data['PEFT_TYPE']
 
 	device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 	
 	print(f"MODEL_NAME : {MODEL_NAME}\nNUM_EPOCHS : {NUM_EPOCHS} \nLR : {LR}\nSAVE_CHKPNT_EPOCH : {SAVE_CHKPNT_EPOCH} \
 	   \nMODEL_CHKPNT_DIR : {MODEL_CHKPNT_DIR}\nSEQ_LEN : {SEQ_LEN}\nBATCH_SIZE : {BATCH_SIZE}\nOPTIMIZER_NAME : {OPTIMIZER_NAME}\ndevice : {device}\nOPT_LEVEL : {OPT_LVL} \
 	   \nPRECISION_TYPE:{PRECISION_TYPE}\n")
-	
-	num_batches = len(train_dataloader)
+
+	# num_batches = len(train_dataloader)
 	step = 0
 	epoch_total_time  = 0
 	forward_total_time, backward_total_time = 0, 0
@@ -64,14 +67,25 @@ def train(train_dataloader, trained_model_filename, yaml_data):
 
 	print(f"\nloading model {MODEL_NAME} , optimizer and scheduler")
 
-	model = AutoModelForCausalLM.from_pretrained(MODEL_NAME) # , low_cpu_mem_usage = True
-	model.to(device)
-	num_training_steps = NUM_EPOCHS * num_batches
-	optimizer    = get_opt(model, OPTIMIZER_NAME, yaml_data)
-	lr_scheduler = get_schdlr(optimizer, num_training_steps)
+	# num_training_steps = NUM_EPOCHS * num_batches
+	# optimizer    = get_opt(model, OPTIMIZER_NAME, yaml_data)
+	# lr_scheduler = get_schdlr(optimizer, num_training_steps)
 	
-	#LoRA 
-	model = getLoraModel(model)
+	#LoRA / qLoRA 
+	if PEFT_TYPE == 'lora':
+		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME) # low_cpu_mem_usage = True
+		model = getLoraModel(model)
+		model.to(device)
+	elif PEFT_TYPE == 'qlora' :
+		nf4_config = BitsAndBytesConfig(
+			load_in_4bit=True,
+			bnb_4bit_quant_type="nf4",
+			bnb_4bit_use_double_quant=True,
+			bnb_4bit_compute_dtype=torch.bfloat16
+		)
+		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, quantization_config=nf4_config, device_map="auto")
+
+ 
 
 	if trained_model_filename != None:
 		model_chkpnt = os.path.join(PARENT_PATH, yaml_data['MODEL_CHKPNT_DIR'], trained_model_filename)  
@@ -80,51 +94,50 @@ def train(train_dataloader, trained_model_filename, yaml_data):
 
 	model.train()
 	
-	# progress_bar = tqdm(range(num_training_steps))
+	training_args = TrainingArguments(
+		output_dir="gpt2_lora",
+		evaluation_strategy="epoch",
+		learning_rate=LR,
+		weight_decay=WEIGHT_DECAY, 
+		num_train_epochs = 1,
+		save_strategy = "no",
+		remove_unused_columns=False,
+		per_device_train_batch_size  = BATCH_SIZE,
+		per_device_eval_batch_size  = BATCH_SIZE
+	)
+
+	trainer = Trainer(
+		model=model,
+		args=training_args,
+		train_dataset=data["train"],
+		eval_dataset=data["test"]
+	)
+	
+	train_dataset_length = len(trainer.train_dataset)
+	num_batches = (train_dataset_length + BATCH_SIZE - 1) // BATCH_SIZE
+
+	print(f"num batches : {num_batches}")
+
 	print("\nmodel, opt, schdl loaded")
 	print("\nbeginning training ...")
-
+		
 	for epoch in range(NUM_EPOCHS):
 		
 		start_time = time.time()
 
-		try : 
-			for i, batch in enumerate(train_dataloader):
-				
-				batch = {k: v.to(device) for k, v in batch.items()}
-
-				forward_st = time.time()
-				outputs = model(**batch)
-				forward_et = time.time()
-				forward_total_time += (forward_et - forward_st)
-
-				loss = outputs.loss
-				running_loss += loss
-
-				backward_st = time.time()
-				loss.backward()
-				backward_et = time.time()
-				backward_total_time += (backward_et - backward_st)
-
-				optimizer.step()
-				lr_scheduler.step()
-				optimizer.zero_grad()
-				
-				step += 1
-
-				print(f"epoch : {epoch+1} / {NUM_EPOCHS} iter : {i} / {num_batches},  loss : {loss}")
-		
-		except RuntimeError as e:
-			print(f"RuntimeError : {e}")
+		trainer.train()
+		# print(trainer.get_optimizer_cls_and_kwargs(training_args)[1]['lr'])
+		# last_updated_lr = trainer.get_optimizer_cls_and_kwargs(training_args)[1]['lr']
+		# training_args.learning_rate = last_updated_lr
+		# train_loss = trainer.evaluate()["loss"]
+		# print(trainer.state.log_history)
 
 		end_time = time.time()
 		epoch_time = end_time - start_time
 		epoch_total_time += epoch_time
 
 		#average training loss
-		avg_loss = running_loss / num_batches
-		print(f"\nepoch : {epoch+1} / {NUM_EPOCHS} \naverage training loss : {avg_loss.item()}")
-		running_loss = 0
+		# print(f"\nepoch : {epoch+1} / {NUM_EPOCHS} \naverage training loss : {train_loss}")
 		
 		#training time per epoch
 		print(f'total training time : {epoch_time:.2f} seconds')
@@ -144,17 +157,14 @@ def train(train_dataloader, trained_model_filename, yaml_data):
 
 		tot_cpu_mem += cpu_mem
 		tot_gpu_mem += gpu_mem
-
-		print(f"lr schdl : {lr_scheduler.state_dict()}")
-
-		#save checkpoint on disk 
-		if SAVE_CHKPNT_EPOCH is not None and epoch % SAVE_CHKPNT_EPOCH == 0:
-			checkpoint_path = os.path.join(PARENT_PATH, MODEL_CHKPNT_DIR, f'{MODEL_NAME}_{PRECISION_TYPE}_chkpoint_{epoch+1}.pth')
-			size_in_bytes = save_checkpoint(model, optimizer, lr_scheduler, checkpoint_path)
 	
-		df_list.append([epoch+1, avg_loss.item() , epoch_time, t_tps, is_tps ])
-		df = pd.DataFrame(df_list, columns = ['epoch' , 'loss', 'training time', 'token throughput', 'input throughput' ])
-		df.to_csv( os.path.join(PARENT_PATH, log_dir, f'report_{MODEL_NAME}_{PRECISION_TYPE}.csv') , index = False)
+		# save csv file with model logs
+		# df_list.append([epoch+1, avg_loss.item() , epoch_time, t_tps, is_tps ])
+		# df = pd.DataFrame(df_list, columns = ['epoch' , 'loss', 'training time', 'token throughput', 'input throughput' ])
+		# L_DIR = os.path.join(PARENT_PATH, log_dir)
+		# if not os.path.exits(L_DIR):
+		# 	os.makedirs(L_DIR)
+		# df.to_csv( os.path.join(L_DIR, f'report_{MODEL_NAME}_{PRECISION_TYPE}.csv') , index = False)
 
 	#total training time per epoch
 	print(f'Total training Time for {NUM_EPOCHS} epoch : {epoch_total_time :.2f} seconds')
@@ -309,8 +319,7 @@ def main():
 	# eg:  'gpt2_SINGLE_chkpoint_4.pth'
 	trained_model_filename = None
 	data = getDataset(yaml_data)
-	train_dataloader, eval_dataloader = getDataloaders(data, yaml_data)
-	model = train(train_dataloader, trained_model_filename,  yaml_data)
+	model = train(data,  trained_model_filename,  yaml_data)
 
 
 if __name__ == '__main__':

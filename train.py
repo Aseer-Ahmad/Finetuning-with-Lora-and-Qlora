@@ -53,7 +53,7 @@ def train(data,  trained_model_filename, yaml_data):
 	device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 	
 	print(f"MODEL_NAME : {MODEL_NAME}\nNUM_EPOCHS : {NUM_EPOCHS} \nLR : {LR}\nSAVE_CHKPNT_EPOCH : {SAVE_CHKPNT_EPOCH} \
-	   \nMODEL_CHKPNT_DIR : {MODEL_CHKPNT_DIR}\nSEQ_LEN : {SEQ_LEN}\nBATCH_SIZE : {BATCH_SIZE}\nOPTIMIZER_NAME : {OPTIMIZER_NAME}\ndevice : {device}\nOPT_LEVEL : {OPT_LVL} \
+	   \nMODEL_CHKPNT_DIR : {MODEL_CHKPNT_DIR}\nSEQ_LEN : {SEQ_LEN}\nBATCH_SIZE : {BATCH_SIZE}\nOPTIMIZER_NAME : {OPTIMIZER_NAME}\ndevice : {device}\nPEFT_TYPE : {PEFT_TYPE} \
 	   \nPRECISION_TYPE:{PRECISION_TYPE}\n")
 
 	# num_batches = len(train_dataloader)

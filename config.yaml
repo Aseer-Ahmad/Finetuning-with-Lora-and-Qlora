@@ -12,7 +12,7 @@ SEQ_LEN    : 128
 BATCH_SIZE : 8
 OPTIMIZER_NAME : AdamW
 MOMENTUM : 0.9
-PEFT_TYPE     : lora
+PEFT_TYPE     : 
 
 OPT_LEVEL : 'O0'
 TOP_K  :

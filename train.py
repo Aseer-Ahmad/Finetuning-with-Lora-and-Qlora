@@ -80,11 +80,13 @@ def train(data,  trained_model_filename, yaml_data):
 		nf4_config = BitsAndBytesConfig(
 			load_in_4bit=True,
 			bnb_4bit_quant_type="nf4",
-			bnb_4bit_use_double_quant=True,
+			# bnb_4bit_use_double_quant=True,
 			bnb_4bit_compute_dtype=torch.bfloat16
 		)
 		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, quantization_config=nf4_config, device_map="auto")
-
+	else:  # regular 
+		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
+		model.to(device)
  
 
 	if trained_model_filename != None:
@@ -221,71 +223,6 @@ def get_schdlr(optimizer, num_training_steps):
 	)
 
 	return lr_scheduler
-
-def eval(model, eval_dataloader, model_chkpnt, quantize, yaml_data):
-	
-	print("starting eval ...")
-
-	#arguments
-	MODEL_NAME        = yaml_data['MODEL_NAME']
-	MODEL_CHKPNT_DIR  = yaml_data['MODEL_CHKPNT_DIR']
-	SEQ_LEN           = int(yaml_data['SEQ_LEN'])
-	BATCH_SIZE		  = int(yaml_data['BATCH_SIZE'])
-
-	device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-	metric = None #evaluate.load("accuracy")	
-
-	model_chkpnt = os.path.join(PARENT_PATH, MODEL_CHKPNT_DIR, model_chkpnt)
-
-	if model is None and model_chkpnt != None:
-		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
-		model , optimizer, lr_scheduler,= load_checkpoint(model, None, None, model_chkpnt)
-
-	if quantize : 
-		print("model size before quantization")
-		check_model_size(model)
-		print(model)
-		model = dynamic_quantization(model)
-		device = torch.device("cpu")
-		print(model)
-		print("model size after quantization")
-		check_model_size(model)
-
-	model.to(device)
-	model.eval()
-
-	num_batches = len(eval_dataloader)
-	count = 1
-	running_loss = 0
-
-	st = time.time()
-	for batch in eval_dataloader:
-		batch = {k: v.to(device) for k, v in batch.items()}
-		with torch.no_grad():
-			outputs 	= model(**batch)
-			loss		= outputs.loss
-			running_loss += loss
-
-			print(f"batch : {count}/{num_batches} loss : {loss}")
-			count += 1
-
-			# logits      = outputs.logits
-			# predictions = torch.argmax(logits, dim=-1)
-			# metric.add_batch(predictions=predictions, references=batch["labels"])
-			# metric.compute()
-
-	et =  time.time()
-	run_time = et - st
-
-	gpu_mem, gpu_mem_max = check_gpu_memory()
-	cpu_mem              = check_cpu_memory()
-
-	#token throughput 
-	print(f'total running time : {run_time} seconds')
-	print(f'token throughput : {(SEQ_LEN * BATCH_SIZE * num_batches ) / run_time :.4f} tokens per second')
-	print(f"average loss : {running_loss / num_batches}")
-
-	check_model_size(model)
 		
 
 def config():

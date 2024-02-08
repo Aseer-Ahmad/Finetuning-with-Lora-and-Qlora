@@ -19,7 +19,7 @@ def getLoraModel(model):
 
     # add LoRA adaptor
     model = get_peft_model(model, lora_config)
-    # lora.mark_only_lora_as_trainable(model)
+    lora.mark_only_lora_as_trainable(model)
     model.print_trainable_parameters()
 
     return model

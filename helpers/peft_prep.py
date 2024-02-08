@@ -14,7 +14,7 @@ def getLoraModel(model):
     )
 
     # prepare int-8 model for training
-    model = prepare_model_for_int8_training(model)
+   # model = prepare_model_for_int8_training(model)
 
 
     # add LoRA adaptor

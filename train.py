@@ -80,14 +80,14 @@ def train(data,  trained_model_filename, yaml_data):
 		nf4_config = BitsAndBytesConfig(
 			load_in_4bit=True,
 			bnb_4bit_quant_type="nf4",
-			# bnb_4bit_use_double_quant=True,
+			bnb_4bit_use_double_quant=True,
 			bnb_4bit_compute_dtype=torch.bfloat16
 		)
 		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, quantization_config=nf4_config, device_map="auto")
+		model = getLoraModel(model)
 	else:  # regular 
 		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 		model.to(device)
- 
 
 	if trained_model_filename != None:
 		model_chkpnt = os.path.join(PARENT_PATH, yaml_data['MODEL_CHKPNT_DIR'], trained_model_filename)  
@@ -118,7 +118,7 @@ def train(data,  trained_model_filename, yaml_data):
 	train_dataset_length = len(trainer.train_dataset)
 	num_batches = (train_dataset_length + BATCH_SIZE - 1) // BATCH_SIZE
 
-	print(f"num batches : {num_batches}")
+	print(f"num batches : {num_batches}\ntotal train samples : {train_dataset_length}")
 
 	print("\nmodel, opt, schdl loaded")
 	print("\nbeginning training ...")

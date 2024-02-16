@@ -85,7 +85,8 @@ def train(data,  trained_model_filename, yaml_data):
 		)
 		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, quantization_config=nf4_config, device_map="auto")
 		model = getLoraModel(model)
-	else:  # regular 
+	else:  # regular
+		PEFT_TYPE = 'reg'
 		model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 		model.to(device)
 
@@ -167,6 +168,12 @@ def train(data,  trained_model_filename, yaml_data):
 		# if not os.path.exits(L_DIR):
 		# 	os.makedirs(L_DIR)
 		# df.to_csv( os.path.join(L_DIR, f'report_{MODEL_NAME}_{PRECISION_TYPE}.csv') , index = False)
+
+    #saving model
+    # print(f'saving model at {checkpoint_path}')
+	checkpoint_path = os.path.join(MODEL_CHKPNT_DIR, f'chkpnt_{PEFT_TYPE}.pth')
+	print(f'saving model at {checkpoint_path}')
+	save_checkpoint(model, checkpoint_path)
 
 	#total training time per epoch
 	print(f'Total training Time for {NUM_EPOCHS} epoch : {epoch_total_time :.2f} seconds')

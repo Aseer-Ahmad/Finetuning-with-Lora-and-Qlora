@@ -39,12 +39,12 @@ def check_cpu_memory():
 	return cpu_mem
 
 
-def save_checkpoint(model, optimizer, lr_scheduler, checkpoint_path ):
+def save_checkpoint(model, checkpoint_path):
 	
 	torch.save({
-        'model_state_dict': model.state_dict(),
-		'optimizer_state_dict': optimizer.state_dict(),
-		'lr_state_dict' : lr_scheduler.state_dict()
+        'model_state_dict': model.state_dict()
+		#'optimizer_state_dict': optimizer.state_dict(),
+		#'lr_state_dict' : lr_scheduler.state_dict()
     }, checkpoint_path)
 
 	#report checkpoint size on-disk

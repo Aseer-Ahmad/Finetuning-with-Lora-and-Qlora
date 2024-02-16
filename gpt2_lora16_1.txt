@@ -1,0 +1,87 @@
+{'MODEL_NAME': 'gpt2', 'MODEL_CHKPNT_DIR': 'models/', 'TOKENIZER': 'gpt2', 'DATASET_NAME': 'databricks/databricks-dolly-15k', 'features': ['instruction', 'context', 'response', 'category'], 'NUM_EPOCHS': 5, 'LR': '2e-5', 'WEIGHT_DECAY': 0.01, 'SEQ_LEN': 128, 'BATCH_SIZE': 16, 'OPTIMIZER_NAME': 'AdamW', 'MOMENTUM': 0.9, 'PEFT_TYPE': 'lora', 'OPT_LEVEL': 'O0', 'TOP_K': None, 'TOP_P': None, 'DO_SAMPLE': True, 'SAVE_CHKPNT_EPOCH': 3, 'TRAIN_SIZE': None, 'TEST_SIZE': None, 'VAL_SIZE': None, 'TRAIN_PER': None, 'TEST_PER': 0.2, 'VAL_PER': None, 'PRECISION_TYPE': 'SINGLE', 'SEED': 42}
+
+in getDataset
+DatasetDict({
+    train: Dataset({
+        features: ['input_ids', 'attention_mask', 'labels'],
+        num_rows: 15403
+    })
+    test: Dataset({
+        features: ['input_ids', 'attention_mask', 'labels'],
+        num_rows: 3799
+    })
+})
+
+in train
+MODEL_NAME : gpt2
+NUM_EPOCHS : 5 
+LR : 2e-05
+SAVE_CHKPNT_EPOCH : 3 	   
+MODEL_CHKPNT_DIR : models/
+SEQ_LEN : 128
+BATCH_SIZE : 16
+OPTIMIZER_NAME : AdamW
+device : cuda
+PEFT_TYPE : lora 	   
+PRECISION_TYPE:SINGLE
+
+
+loading model gpt2 , optimizer and scheduler
+trainable params: 589,824 || all params: 125,029,632 || trainable%: 0.4717473694555863
+num batches : 963
+total train samples : 15403
+
+model, opt, schdl loaded
+
+beginning training ...
+{'eval_loss': 3.4798731803894043, 'eval_runtime': 14.1409, 'eval_samples_per_second': 268.652, 'eval_steps_per_second': 8.415, 'epoch': 1.0}
+{'train_runtime': 120.8495, 'train_samples_per_second': 127.456, 'train_steps_per_second': 3.988, 'train_loss': 3.7005850764231067, 'epoch': 1.0}
+total training time : 120.96 seconds
+tokens processed per second : 16304.5651
+input sequence of size 128 processed per second : 127.3794
+GPU Memory Allocated: 535.26528 MB
+GPU Max Memory Allocated: 4784.620032 MB
+CPU Memory Used: 6426.529792 MB
+{'eval_loss': 3.4454827308654785, 'eval_runtime': 14.1162, 'eval_samples_per_second': 269.124, 'eval_steps_per_second': 8.43, 'epoch': 1.0}
+{'train_runtime': 117.9787, 'train_samples_per_second': 130.557, 'train_steps_per_second': 4.085, 'train_loss': 3.6276627536631225, 'epoch': 1.0}
+total training time : 118.26 seconds
+tokens processed per second : 16677.6659
+input sequence of size 128 processed per second : 130.2943
+GPU Memory Allocated: 535.26528 MB
+GPU Max Memory Allocated: 4784.620032 MB
+CPU Memory Used: 6434.95936 MB
+{'eval_loss': 3.425008535385132, 'eval_runtime': 14.1321, 'eval_samples_per_second': 268.82, 'eval_steps_per_second': 8.421, 'epoch': 1.0}
+{'train_runtime': 118.0274, 'train_samples_per_second': 130.504, 'train_steps_per_second': 4.084, 'train_loss': 3.592327197063019, 'epoch': 1.0}
+total training time : 118.30 seconds
+tokens processed per second : 16670.9278
+input sequence of size 128 processed per second : 130.2416
+GPU Memory Allocated: 535.26528 MB
+GPU Max Memory Allocated: 4784.620032 MB
+CPU Memory Used: 6449.221632 MB
+{'eval_loss': 3.4121742248535156, 'eval_runtime': 14.1266, 'eval_samples_per_second': 268.925, 'eval_steps_per_second': 8.424, 'epoch': 1.0}
+{'train_runtime': 118.0713, 'train_samples_per_second': 130.455, 'train_steps_per_second': 4.082, 'train_loss': 3.5718758610768933, 'epoch': 1.0}
+total training time : 118.35 seconds
+tokens processed per second : 16664.6069
+input sequence of size 128 processed per second : 130.1922
+GPU Memory Allocated: 535.26528 MB
+GPU Max Memory Allocated: 4784.620032 MB
+CPU Memory Used: 6470.176768 MB
+{'eval_loss': 3.4017839431762695, 'eval_runtime': 14.131, 'eval_samples_per_second': 268.842, 'eval_steps_per_second': 8.421, 'epoch': 1.0}
+{'train_runtime': 118.0388, 'train_samples_per_second': 130.491, 'train_steps_per_second': 4.083, 'train_loss': 3.556014318189186, 'epoch': 1.0}
+total training time : 118.32 seconds
+tokens processed per second : 16669.1993
+input sequence of size 128 processed per second : 130.2281
+GPU Memory Allocated: 535.26528 MB
+GPU Max Memory Allocated: 4784.620032 MB
+CPU Memory Used: 6480.32256 MB
+saving model at models/chkpnt_lora.pth
+models/chkpnt_lora.pth : 500197786 bytes
+Total training Time for 5 epoch : 594.18 seconds
+Average training Time per epoch : 118.84 seconds
+token throughput : 16596.0830 tokens per second
+input sequence throughput : 129.6569 input sequences per second
+Average forward pass Time per epoch : 0.00 seconds
+Average backward pass Time per epoch : 0.00 seconds
+Average gpu memory consumption per epoch: 535.2653 MB
+Average cpu memory consumption per epoch: 6452.2420 MB
+maximum gpu memory consumed : 4784.6200 MB
